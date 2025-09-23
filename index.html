@@ -10,8 +10,30 @@
 <button id="startButton">Start</button>
 <button id="restartBtn" class="hidden">Play again</button>
 </div>
+<!-- Settings (cog) button -->
+<button id="settingsBtn" aria-label="Menu" title="Menu">☰</button>
 <canvas id="debugCanvas" class="hidden" aria-hidden="true"></canvas>
 <div id="target" aria-label="Hidden target" title="You found her!"></div>
+<!-- Settings modal -->
+<div id="settingsModal" class="hidden" aria-hidden="true" role="dialog" aria-labelledby="settingsTitle">
+  <div id="settingsPanel">
+    <div id="settingsHeader">
+      <h2 id="settingsTitle">Settings</h2>
+      <button id="closeSettings" aria-label="Close settings" title="Close">×</button>
+    </div>
+    <div id="settingsBody">
+      <label id="advancedLabel">
+        <input type="checkbox" id="advancedToggle" />
+        <span>Advanced mode (no pointer hint near target)</span>
+      </label>
+      <hr />
+      <div id="settingsLinks">
+        <a id="githubLink" href="https://github.com/sugoijan/noynoynoy" target="_blank" rel="noopener noreferrer">View project on GitHub</a>
+      </div>
+    </div>
+  </div>
+  <!-- clicking backdrop also closes -->
+</div>
 </div>
 <script src="script.js"></script>
 </html>

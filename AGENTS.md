@@ -29,6 +29,6 @@
 
 ## Agent‑Specific Instructions
 - Do not introduce bundlers or heavy deps; keep it a static site.
-- Preserve structure and style; make small, focused diffs. Update `README.md` if behavior changes.
+- Preserve structure and style; make small, focused diffs. Keep `README.md` simple.
 - Avoid touching the Pages workflow unless required for deployment.
 

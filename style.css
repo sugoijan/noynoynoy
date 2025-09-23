@@ -1,12 +1,12 @@
 /* Use these custom variables... */
 :root {
-  --fg: #e8e8e8;
+  --fg: #ffffff;
   --accent: #7cc6ff;
   --reveal-duration: 800ms; /* default; can be overridden by JS */
   --reveal-ease: cubic-bezier(0.4, 0, 1, 1); /* ease-in */
   --bg: #ffffff;
-  --button-bg: #28304a;
-  --button-fg: var(--fg);
+  --button-bg: #ec9ac0;
+  --button-fg: #3c3c3c;
   --hud-bg: rgba(0,0,0,0.25);
   --hud-shadow: 0 6px 20px rgba(0,0,0,0.25);
   --polka-bg-image:
@@ -28,6 +28,35 @@
   --debug-label-fg: rgba(255,255,255,0.9);
   --debug-target-dot: rgba(255,80,80,0.9);
   --debug-target-cross: rgba(255,80,80,0.8);
+
+  /* Settings UI variables */
+  --settings-cog-top: 12px;
+  --settings-cog-right: 12px;
+  --settings-cog-size: 32px;
+  --settings-cog-bg: transparent;
+  --settings-cog-shadow: none;
+  --settings-cog-fg: #404040;
+  --settings-cog-radius: 8px;
+  --settings-cog-font-size: 32px;
+  --settings-cog-hover-bg: rgba(255,255,255,0.06);
+  --settings-cog-active-bg: rgba(255,255,255,0.1);
+  --settings-cog-opacity: 0.8;
+
+  --settings-overlay-bg: rgba(0,0,0,0.35);
+  --settings-fade-duration: 200ms;
+  --settings-panel-width: min(92vw, 420px);
+  --settings-panel-radius: 12px;
+  --settings-panel-bg: rgba(10,16,28,0.9);
+  --settings-panel-shadow: var(--hud-shadow);
+  --settings-panel-padding: 14px 14px 16px;
+  --settings-panel-blur: 8px;
+  --settings-title-size: 18px;
+  --settings-text-size: 14px;
+  --settings-gap: 10px;
+  --settings-close-size: 32px;
+  --settings-hr-color: rgba(255,255,255,0.12);
+  --z-settings-btn: 220;
+  --z-settings-modal: 300;
 }
 
 * {
@@ -140,3 +169,104 @@ button.hidden { display: none; }
   z-index: 100;
 }
 #debugCanvas.hidden { display: none; }
+
+/* Settings button (cog) */
+#settingsBtn {
+  position: absolute;
+  top: var(--settings-cog-top);
+  right: var(--settings-cog-right);
+  width: var(--settings-cog-size);
+  height: var(--settings-cog-size);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: var(--settings-cog-bg);
+  box-shadow: var(--settings-cog-shadow);
+  border-radius: var(--settings-cog-radius);
+  color: var(--settings-cog-fg);
+  font-size: var(--settings-cog-font-size);
+  line-height: 1;
+  opacity: var(--settings-cog-opacity);
+  transition: background-color 120ms ease, opacity 120ms ease, transform 60ms ease;
+  z-index: var(--z-settings-btn);
+}
+#settingsBtn:hover { background: var(--settings-cog-hover-bg); opacity: 1; filter: none; }
+#settingsBtn:active { background: var(--settings-cog-active-bg); transform: translateY(1px); }
+
+/* Settings modal */
+#settingsModal {
+  position: absolute;
+  inset: 0;
+  background: var(--settings-overlay-bg);
+  display: grid;
+  place-items: center;
+  z-index: var(--z-settings-modal);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--settings-fade-duration) ease;
+}
+#settingsModal.hidden,
+#settingsModal[aria-hidden="true"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#settingsPanel {
+  width: var(--settings-panel-width);
+  background: var(--settings-panel-bg);
+  color: var(--fg);
+  border-radius: var(--settings-panel-radius);
+  box-shadow: var(--settings-panel-shadow);
+  padding: var(--settings-panel-padding);
+  backdrop-filter: blur(var(--settings-panel-blur));
+  transform: scale(1);
+  transition: transform var(--settings-fade-duration) ease,
+              opacity var(--settings-fade-duration) ease;
+  opacity: 1;
+}
+#settingsModal.hidden #settingsPanel,
+#settingsModal[aria-hidden="true"] #settingsPanel {
+  transform: scale(0.98);
+  opacity: 0.98;
+}
+
+#settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--settings-gap);
+  margin-bottom: 8px;
+}
+#settingsHeader h2 {
+  margin: 0;
+  font-size: var(--settings-title-size);
+}
+#closeSettings {
+  width: var(--settings-close-size);
+  height: var(--settings-close-size);
+}
+
+#settingsBody {
+  font-size: var(--settings-text-size);
+}
+
+#advancedLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--settings-gap);
+}
+
+#settingsBody hr {
+  border: none;
+  border-top: 1px solid var(--settings-hr-color);
+  margin: 12px 0;
+}
+
+#settingsLinks a {
+  color: var(--accent);
+  text-decoration: none;
+}
+#settingsLinks a:hover {
+  text-decoration: underline;
+}

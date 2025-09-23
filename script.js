@@ -7,6 +7,10 @@
   const restartBtn = document.getElementById('restartBtn');
   const msg = document.getElementById('msg');
   const debugCanvas = document.getElementById('debugCanvas');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  const advancedToggle = document.getElementById('advancedToggle');
+  const closeSettings = document.getElementById('closeSettings');
 
   const state = {
     running: false,
@@ -35,6 +39,7 @@
       },
     },
     debug: { on: false, ctx: null, dpr: 1 },
+    settings: { advanced: false },
     audio: {
       ctx: null,
       master: null,
@@ -49,6 +54,19 @@
   };
 
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+  function loadSettings() {
+    try {
+      const v = localStorage.getItem('noy.advanced');
+      state.settings.advanced = v === '1' || v === 'true';
+    } catch {}
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem('noy.advanced', state.settings.advanced ? '1' : '0');
+    } catch {}
+  }
 
   function applyConfigToStyles() {
     const root = document.documentElement;
@@ -336,7 +354,13 @@
   field.addEventListener('click', (e) => {
     if (!state.running) return;
     // Ignore UI buttons
-    if (e.target === startBtn || e.target === restartBtn) return;
+    if (
+      e.target === startBtn ||
+      e.target === restartBtn ||
+      e.target === settingsBtn ||
+      (hud && hud.contains(e.target)) ||
+      (settingsModal && settingsModal.contains(e.target))
+    ) return;
     const dx = state.pointer.x - state.target.x;
     const dy = state.pointer.y - state.target.y;
     const dist = Math.hypot(dx, dy);
@@ -344,6 +368,41 @@
   });
   window.addEventListener('resize', onResize);
   targetEl.addEventListener('click', win);
+
+  // Settings modal wiring
+  function openSettings() {
+    if (!settingsModal) return;
+    if (advancedToggle) advancedToggle.checked = !!state.settings.advanced;
+    settingsModal.classList.remove('hidden');
+    settingsModal.setAttribute('aria-hidden', 'false');
+  }
+  function closeSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.add('hidden');
+    settingsModal.setAttribute('aria-hidden', 'true');
+  }
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+  if (closeSettings) closeSettings.addEventListener('click', closeSettingsModal);
+  if (settingsModal) settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettingsModal();
+  });
+  if (advancedToggle) advancedToggle.addEventListener('change', () => {
+    state.settings.advanced = !!advancedToggle.checked;
+    saveSettings();
+    // Refresh cursor/pointer behavior immediately
+    const idx = computeDesiredLevel();
+    if (state.running) setActiveLevel(idx);
+    drawDebug();
+  });
+
+  // Close settings with Escape
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsModal && !settingsModal.classList.contains('hidden')) {
+      closeSettingsModal();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
 
   // Accessibility: keyboard hint — arrow keys nudge a virtual pointer
   window.addEventListener('keydown', (e) => {
@@ -555,6 +614,7 @@
 
   window.addEventListener('hashchange', syncDebugFromHash);
   syncDebugFromHash();
+  loadSettings();
   applyConfigToStyles();
 
   // Cursor management: crosshair only in playable area, hand when near target
@@ -567,7 +627,8 @@
 
   function updateCursor(near) {
     const inside = isPointerInPlayableArea();
-    const cursor = inside ? (near ? 'pointer' : 'crosshair') : 'default';
+    const showHand = near && !state.settings.advanced;
+    const cursor = inside ? (showHand ? 'pointer' : 'crosshair') : 'default';
     field.style.cursor = cursor;
   }
 })();
