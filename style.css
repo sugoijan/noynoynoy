@@ -1,15 +1,33 @@
 /* Use these custom variables... */
 :root {
-  --bg: #0f1220;
-  --fg: #e8ecff;
+  --fg: #e8e8e8;
   --accent: #7cc6ff;
-  --accent-2: #ffd86b;
+  --reveal-duration: 800ms; /* default; can be overridden by JS */
+  --reveal-ease: cubic-bezier(0.4, 0, 1, 1); /* ease-in */
+  --bg: #ffffff;
+  --button-bg: #28304a;
+  --button-fg: var(--fg);
+  --hud-bg: rgba(0,0,0,0.25);
+  --hud-shadow: 0 6px 20px rgba(0,0,0,0.25);
   --polka-bg-image:
     radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%),
     radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%);
   --polka-bg-position: 0px 0px, 28px 28px;
   --polka-bg-size: 56px 56px;
   --polka-bg-color: rgb(255, 255, 255);
+
+  /* Debug overlay colors */
+  --debug-ring: rgba(124,198,255,0.35);
+  --debug-ring-outer: rgba(124,198,255,0.22);
+  --debug-reveal: rgba(255,110,110,0.6);
+  --debug-play-area: rgba(120,255,120,0.7);
+  --debug-pointer-line: rgba(255,255,255,0.3);
+  --debug-pointer-dot: rgba(255,255,255,0.85);
+  --debug-pointer-ring: rgba(255,255,255,0.45);
+  --debug-label-bg: rgba(0,0,0,0.4);
+  --debug-label-fg: rgba(255,255,255,0.9);
+  --debug-target-dot: rgba(255,80,80,0.9);
+  --debug-target-cross: rgba(255,80,80,0.8);
 }
 
 * {
@@ -24,12 +42,10 @@ body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   color: var(--fg);
-  background-image: 
-    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%),
-    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%);
-  background-position: 0px 0px, 28px 28px;
-  background-size: 56px 56px;
-  background-color: rgb(255, 255, 255);
+  background-image: var(--polka-bg-image);
+  background-position: var(--polka-bg-position);
+  background-size: var(--polka-bg-size);
+  background-color: var(--polka-bg-color, var(--bg));
 }
 
 #field {
@@ -37,7 +53,7 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  cursor: crosshair;
+  cursor: default;
 }
 
 #hud {
@@ -48,11 +64,12 @@ body {
   display: flex;
   gap: 12px;
   align-items: center;
-  background: rgba(0,0,0,0.25);
+  background: var(--hud-bg);
   padding: 10px 14px;
   border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  box-shadow: var(--hud-shadow);
   backdrop-filter: blur(6px);
+  z-index: 200;
 }
 
 #msg {
@@ -70,7 +87,7 @@ body {
   font-size: 18px;
   border: none;
   color: #041018;
-  background: linear-gradient(180deg, var(--accent), #5bb7ff);
+  background: var(--accent);
   box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 -2px 0 rgba(0,0,0,0.25);
   cursor: pointer;
 }
@@ -79,8 +96,8 @@ button {
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
-  background: #28304a;
-  color: var(--fg);
+  background: var(--button-bg);
+  color: var(--button-fg, var(--fg));
   cursor: pointer;
 }
 button:hover { filter: brightness(1.1); }
@@ -95,19 +112,31 @@ button.hidden { display: none; }
   opacity: 0; /* stays invisible until you win */
   pointer-events: none; /* becomes clickable when near */
   transition: opacity 180ms ease,
-              transform 600ms cubic-bezier(.2,.8,.2,1),
-              left 600ms cubic-bezier(.2,.8,.2,1),
-              top 600ms cubic-bezier(.2,.8,.2,1);
+              transform var(--reveal-duration) var(--reveal-ease),
+              left var(--reveal-duration) var(--reveal-ease),
+              top var(--reveal-duration) var(--reveal-ease);
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
   will-change: transform, left, top, opacity;
+  z-index: 80;
 }
 
 #target.found {
   transform: translate(-50%, -50%) scale(1);
-  background-image: url('noy.png');
+  background-image: url('img/noy.png');
   opacity: 1;
 }
 
-#field.hot { cursor: pointer; }
+/* cursor is managed via JS; buttons keep pointer cursor */
+
+/* Debug overlay canvas */
+#debugCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+#debugCanvas.hidden { display: none; }
