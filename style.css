@@ -1,0 +1,113 @@
+/* Use these custom variables... */
+:root {
+  --bg: #0f1220;
+  --fg: #e8ecff;
+  --accent: #7cc6ff;
+  --accent-2: #ffd86b;
+  --polka-bg-image:
+    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%),
+    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%);
+  --polka-bg-position: 0px 0px, 28px 28px;
+  --polka-bg-size: 56px 56px;
+  --polka-bg-color: rgb(255, 255, 255);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--fg);
+  background-image: 
+    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%),
+    radial-gradient(rgb(238, 238, 238) 18.4%, transparent 20%);
+  background-position: 0px 0px, 28px 28px;
+  background-size: 56px 56px;
+  background-color: rgb(255, 255, 255);
+}
+
+#field {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(0,0,0,0.25);
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+}
+
+#msg {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 160px;
+  height: 56px;
+  border-radius: 12px;
+  font-size: 18px;
+  border: none;
+  color: #041018;
+  background: linear-gradient(180deg, var(--accent), #5bb7ff);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35), inset 0 -2px 0 rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #28304a;
+  color: var(--fg);
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button:active { transform: translateY(1px); }
+button.hidden { display: none; }
+
+#target {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%) scale(0.05);
+  opacity: 0; /* stays invisible until you win */
+  pointer-events: none; /* becomes clickable when near */
+  transition: opacity 180ms ease,
+              transform 600ms cubic-bezier(.2,.8,.2,1),
+              left 600ms cubic-bezier(.2,.8,.2,1),
+              top 600ms cubic-bezier(.2,.8,.2,1);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  will-change: transform, left, top, opacity;
+}
+
+#target.found {
+  transform: translate(-50%, -50%) scale(1);
+  background-image: url('noy.png');
+  opacity: 1;
+}
+
+#field.hot { cursor: pointer; }
