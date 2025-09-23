@@ -23,9 +23,11 @@
       // Level mapping uses closeness = 1 - dist / (factor * viewportDiagonal)
       maxDistanceFactor: 0.75,
       // Boundaries between levels 0-1, 1-2, ..., 4-5 in closeness [0..1]
-      levelBreakpoints: [1/6, 3.4/6, 4.5/6, 5.2/6, 5.7/6],
-      // Audible gain targets per level (0..5)
-      volumes: [0.7, 0.8, 0.9, 0.95, 0.98, 1.0],
+      levelBreakpoints: [2/6, 3.4/6, 4.5/6, 5.2/6, 5.7/6],
+      // Per-level audible gain ranges (0..1), min->max.
+      // Tuned for gentle growth inside each level and smooth cross-level feel.
+      volumesMin: [0.20, 0.90, 0.50, 0.60, 0.40, 0.60],
+      volumesMax: [1.30, 1.00, 0.70, 0.80, 0.70, 1.00],
       // px — image reveals and becomes clickable inside this
       revealRadius: 15,
       // Reveal animation tuning
@@ -39,6 +41,8 @@
       },
     },
     debug: { on: false, ctx: null, dpr: 1 },
+    lastCloseness: 0,
+    lastLevel: -1,
     settings: { advanced: false },
     audio: {
       ctx: null,
@@ -46,6 +50,7 @@
       buffers: [], // AudioBuffer[6]
       loopDur: 1.2, // seconds — will be updated to min(buffer durations)
       xfade: 0.12,  // seconds — quick fade to avoid clicks
+      slew: 0.03,   // seconds — smoothing for within-level changes
       minGain: 0.0001,
       levelGains: [], // GainNode[6]
       levelSources: [], // AudioBufferSourceNode[6]
@@ -105,7 +110,13 @@
 
   async function setupAudio() {
     if (state.audio.ctx) return;
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    let ctx;
+    try {
+      ctx = new AC({ latencyHint: 'interactive' });
+    } catch {
+      ctx = new AC();
+    }
     const master = ctx.createGain();
     master.gain.value = 0.7; // headroom for crossfades
     master.connect(ctx.destination);
@@ -161,11 +172,14 @@
     const dy = py - state.target.y;
     const dist = Math.hypot(dx, dy);
     const idx = levelFromDistance(dist);
+    const closeness = clamp(1 - dist / maxLevelDistance(), 0, 1);
 
     // Near behavior: make area clickable and show hand cursor
     const near = dist <= state.config.revealRadius;
     updateCursor(near);
     targetEl.style.pointerEvents = near ? 'auto' : 'none';
+    state.lastCloseness = closeness;
+    state.lastLevel = idx;
     return idx;
   }
 
@@ -194,21 +208,56 @@
     }
   }
 
+  function levelBounds(idx) {
+    const bp = state.config.levelBreakpoints || [];
+    const lower = idx === 0 ? 0 : (bp[idx - 1] ?? (idx / 6));
+    const upper = idx < 5 ? (bp[idx] ?? ((idx + 1) / 6)) : 1;
+    return { lower, upper };
+  }
+
+  function levelGainForCloseness(idx, closeness) {
+    const { lower, upper } = levelBounds(idx);
+    const denom = Math.max(1e-6, upper - lower);
+    const t = clamp((closeness - lower) / denom, 0, 1);
+    const vMin = state.config.volumesMin[idx] ?? 0.5;
+    const vMax = state.config.volumesMax[idx] ?? 1.0;
+    const gain = vMin + (vMax - vMin) * t;
+    return { gain, t, vMin, vMax, lower, upper };
+  }
+
   function setActiveLevel(idx) {
     const a = state.audio;
     if (!a.ctx || a.levelGains.length !== 6) return;
-    if (idx === a.currentLevel) return;
     const now = a.ctx.currentTime;
-    for (let i = 0; i < 6; i++) {
-      const g = a.levelGains[i].gain;
-      const target = (i === idx) ? state.config.volumes[i] : a.minGain;
-      try {
-        g.cancelScheduledValues(now);
-        g.setValueAtTime(g.value, now);
-        g.linearRampToValueAtTime(target, now + a.xfade);
-      } catch {}
+
+    // Compute per-level progress and target gain using shared helper
+    const { gain: targetActive } = levelGainForCloseness(idx, state.lastCloseness);
+
+    // If level changed, fade previous to silence.
+    if (a.currentLevel !== idx) {
+      if (a.currentLevel >= 0 && a.currentLevel < a.levelGains.length) {
+        const gPrev = a.levelGains[a.currentLevel].gain;
+        try {
+          if (typeof gPrev.cancelAndHoldAtTime === 'function') {
+            gPrev.cancelAndHoldAtTime(now);
+          } else {
+            gPrev.cancelScheduledValues(now);
+            gPrev.setValueAtTime(gPrev.value, now);
+          }
+          gPrev.linearRampToValueAtTime(a.minGain, now + a.xfade);
+        } catch {}
+      }
+      a.currentLevel = idx;
     }
-    a.currentLevel = idx;
+
+    // Update only the active level continuously; others stay at minGain.
+    const g = a.levelGains[idx].gain;
+    try {
+      // Within-level smoothing: quick, low-latency response
+      // Avoid canceling on every frame to keep the envelope continuous.
+      g.setTargetAtTime(targetActive, now, Math.max(0.005, a.slew || 0.03));
+    } catch {}
+
     drawDebug();
   }
 
@@ -534,7 +583,9 @@
     const dx = px - cx;
     const dy = py - cy;
     const dist = Math.hypot(dx, dy);
-    const lvl = levelFromDistance(dist);
+    const lvl = (typeof state.lastLevel === 'number' && state.lastLevel >= 0)
+      ? state.lastLevel
+      : levelFromDistance(dist);
 
     // Line from pointer to target
     ctx.beginPath();
@@ -554,12 +605,15 @@
     ctx.strokeStyle = state.debug.colors.pointerRing;
     ctx.stroke();
 
-    // HUD text
+    // HUD text with dynamic gain preview (uses the same helper as audio)
     const pad = 10;
     ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
     ctx.fillStyle = state.debug.colors.labelFg;
     ctx.textBaseline = 'top';
-    const text = `debug: level ${lvl}  dist ${dist.toFixed(1)}  rMax ${rMax.toFixed(1)}`;
+    // Compute interpolated gain for the detected level (same math as setActiveLevel)
+    const closenessDbg = (typeof state.lastCloseness === 'number') ? state.lastCloseness : clamp(1 - dist / rMax, 0, 1);
+    const dbg = levelGainForCloseness(lvl, closenessDbg);
+    const text = `debug: level ${lvl}  gain ${dbg.gain.toFixed(3)}  [${dbg.vMin.toFixed(2)}–${dbg.vMax.toFixed(2)}]  t ${dbg.t.toFixed(2)}  dist ${dist.toFixed(1)}`;
     const metrics = ctx.measureText(text);
     ctx.fillStyle = state.debug.colors.labelBg;
     ctx.fillRect(pad - 4, pad - 2, metrics.width + 8, 18);
