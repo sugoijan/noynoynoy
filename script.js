@@ -55,6 +55,8 @@
       levelGains: [], // GainNode[6]
       levelSources: [], // AudioBufferSourceNode[6]
       currentLevel: -1,
+      winBuffer: null,
+      winGain: null,
     },
   };
 
@@ -129,6 +131,13 @@
       g.connect(master);
       return g;
     });
+    // Win SFX gain
+    try {
+      const wg = ctx.createGain();
+      wg.gain.value = 0.9;
+      wg.connect(master);
+      state.audio.winGain = wg;
+    } catch {}
   }
 
   async function loadBuffers() {
@@ -143,6 +152,14 @@
       buffers.push(buf);
     }
     state.audio.buffers = buffers;
+    // Preload win sound effect
+    try {
+      const resWin = await fetch('audio/win1.ogg');
+      const arrWin = await resWin.arrayBuffer();
+      state.audio.winBuffer = await ctx.decodeAudioData(arrWin);
+    } catch (e) {
+      console.warn('Failed to load win sound', e);
+    }
   }
 
   function levelFromDistance(dist) {
@@ -300,7 +317,7 @@
     drawDebug();
   }
 
-  function stopSound() {
+  function stopSound(shouldSuspend = true) {
     const a = state.audio;
     if (!a.ctx) return;
     const now = a.ctx.currentTime;
@@ -313,7 +330,9 @@
       } catch {}
     });
     a.currentLevel = -1;
-    try { a.ctx.suspend(); } catch {}
+    if (shouldSuspend) {
+      try { a.ctx.suspend(); } catch {}
+    }
   }
 
   function onPointerMove(e) {
@@ -362,7 +381,18 @@
     // Trigger reveal (image + scale animation)
     targetEl.classList.add('found');
     targetEl.style.opacity = 1;
-    stopSound();
+    // Fade out gameplay loops but keep context alive for the win SFX
+    stopSound(false);
+    // Play win SFX if preloaded
+    try {
+      const a = state.audio;
+      if (a.ctx && a.winBuffer && a.winGain) {
+        const src = a.ctx.createBufferSource();
+        src.buffer = a.winBuffer;
+        src.connect(a.winGain);
+        src.start(a.ctx.currentTime + 0.01);
+      }
+    } catch {}
     msg.textContent = 'You found Noy!';
     restartBtn.classList.remove('hidden');
     field.classList.remove('hot');
