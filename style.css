@@ -4,6 +4,8 @@
   --accent: #7cc6ff;
   --reveal-duration: 800ms; /* default; can be overridden by JS */
   --reveal-ease: cubic-bezier(0.4, 0, 1, 1); /* ease-in */
+  --reveal-rotate-start: 540deg; /* spin while moving to center */
+  --reveal-rotate-ease: cubic-bezier(0, 0, 0.4, 1); /* milder ease-out for spin */
   --bg: #ffffff;
   --button-bg: #ec9ac0;
   --button-fg: #3c3c3c;
@@ -137,11 +139,10 @@ button.hidden { display: none; }
   position: absolute;
   width: 48px;
   height: 48px;
-  transform: translate(-50%, -50%) scale(0.05);
+  transform: translate(-50%, -50%) rotate(var(--reveal-rotate-start)) scale(0.05);
   opacity: 0; /* stays invisible until you win */
   pointer-events: none; /* becomes clickable when near */
   transition: opacity 180ms ease,
-              transform var(--reveal-duration) var(--reveal-ease),
               left var(--reveal-duration) var(--reveal-ease),
               top var(--reveal-duration) var(--reveal-ease);
   background-repeat: no-repeat;
@@ -152,9 +153,19 @@ button.hidden { display: none; }
 }
 
 #target.found {
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  animation: reveal-spin-in var(--reveal-duration) var(--reveal-rotate-ease) both;
   background-image: url('img/noy.png');
   opacity: 1;
+}
+
+@keyframes reveal-spin-in {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--reveal-rotate-start)) scale(0.05);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
 }
 
 /* cursor is managed via JS; buttons keep pointer cursor */

@@ -306,7 +306,7 @@
     targetEl.classList.remove('found');
     targetEl.style.opacity = 0; // keep hidden until win
     targetEl.style.pointerEvents = 'none';
-    msg.textContent = 'Move around to find the hidden Noy.';
+    msg.textContent = 'Move around to find the invisible Noy.';
     startBtn.classList.add('hidden');
     restartBtn.classList.add('hidden');
     state.running = true;
