@@ -1,5 +1,16 @@
 (() => {
   const debugSecret = 'noyiscute';
+  // Asset URLs (work in dev and Parcel builds)
+  const noyImgUrl = new URL('./img/noy.png', import.meta.url).toString();
+  const audioUrls = [
+    new URL('./audio/noy1.ogg', import.meta.url).toString(),
+    new URL('./audio/noy2.ogg', import.meta.url).toString(),
+    new URL('./audio/noy3.ogg', import.meta.url).toString(),
+    new URL('./audio/noy4.ogg', import.meta.url).toString(),
+    new URL('./audio/noy5.ogg', import.meta.url).toString(),
+    new URL('./audio/noy6.ogg', import.meta.url).toString(),
+  ];
+  const winSfxUrl = new URL('./audio/win1.ogg', import.meta.url).toString();
   const field = document.getElementById('field');
   const hud = document.getElementById('hud');
   const targetEl = document.getElementById('target');
@@ -92,7 +103,7 @@
       state.noyImage.loaded = true;
     };
     // Start loading immediately
-    img.src = 'img/noy.png';
+    img.src = noyImgUrl;
   })();
 
   function randomizeTarget() {
@@ -141,24 +152,26 @@
   }
 
   async function loadBuffers() {
-    if (state.audio.buffers.length === 6) return;
-    const files = [1,2,3,4,5,6].map(i => `audio/noy${i}.ogg`);
-    const ctx = state.audio.ctx;
-    const buffers = [];
-    for (const f of files) {
-      const res = await fetch(f);
-      const arr = await res.arrayBuffer();
-      const buf = await ctx.decodeAudioData(arr);
-      buffers.push(buf);
+    if (state.audio.buffers.length !== 6) {
+      const ctx = state.audio.ctx;
+      const buffers = [];
+      for (const f of audioUrls) {
+        const res = await fetch(f);
+        const arr = await res.arrayBuffer();
+        const buf = await ctx.decodeAudioData(arr);
+        buffers.push(buf);
+      }
+      state.audio.buffers = buffers;
     }
-    state.audio.buffers = buffers;
-    // Preload win sound effect
-    try {
-      const resWin = await fetch('audio/win1.ogg');
-      const arrWin = await resWin.arrayBuffer();
-      state.audio.winBuffer = await ctx.decodeAudioData(arrWin);
-    } catch (e) {
-      console.warn('Failed to load win sound', e);
+    // Preload win sound effect if not loaded yet
+    if (!state.audio.winBuffer) {
+      try {
+        const resWin = await fetch(winSfxUrl);
+        const arrWin = await resWin.arrayBuffer();
+        state.audio.winBuffer = await state.audio.ctx.decodeAudioData(arrWin);
+      } catch (e) {
+        console.warn('Failed to load win sound', e);
+      }
     }
   }
 
@@ -379,6 +392,8 @@
       targetEl.style.top = centerY + 'px';
     }
     // Trigger reveal (image + scale animation)
+    // Ensure image URL matches build output when bundled
+    try { targetEl.style.backgroundImage = `url('${noyImgUrl}')`; } catch {}
     targetEl.classList.add('found');
     targetEl.style.opacity = 1;
     // Fade out gameplay loops but keep context alive for the win SFX
