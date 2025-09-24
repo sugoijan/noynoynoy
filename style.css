@@ -159,6 +159,12 @@ button.hidden { display: none; }
   opacity: 1;
 }
 
+/* When reveal animation has finished, disable transitions for instant repositioning */
+#target.revealed-static {
+  transition: none !important;
+  animation: none !important;
+}
+
 @keyframes reveal-spin-in {
   from {
     transform: translate(-50%, -50%) rotate(var(--reveal-rotate-start)) scale(0.05);

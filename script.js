@@ -54,6 +54,7 @@
     debug: { on: false, ctx: null, dpr: 1 },
     lastCloseness: 0,
     lastLevel: -1,
+    winRevealDone: false,
     settings: { advanced: false },
     audio: {
       ctx: null,
@@ -257,6 +258,7 @@
 
   function setActiveLevel(idx) {
     const a = state.audio;
+    if (!state.running) return; // avoid restarting audio after win/idle
     if (!a.ctx || a.levelGains.length !== 6) return;
     const now = a.ctx.currentTime;
 
@@ -358,13 +360,37 @@
   }
 
   function onResize() {
+    // If already found, keep centered and refit to viewport
+    if (!state.running && targetEl.classList.contains('found')) {
+      const natW = state.noyImage.loaded ? state.noyImage.w : 512;
+      const natH = state.noyImage.loaded ? state.noyImage.h : 512;
+      const margin = 20;
+      const maxW = Math.max(60, window.innerWidth - margin * 2);
+      const maxH = Math.max(60, window.innerHeight - margin * 2);
+      const fit = Math.min(1, maxW / natW, maxH / natH);
+      const finalW = Math.round(natW * fit);
+      const finalH = Math.round(natH * fit);
+      targetEl.style.width = finalW + 'px';
+      targetEl.style.height = finalH + 'px';
+      const centerX = Math.round(window.innerWidth / 2);
+      const centerY = Math.round(window.innerHeight / 2);
+      targetEl.style.left = centerX + 'px';
+      targetEl.style.top = centerY + 'px';
+      state.target.x = centerX;
+      state.target.y = centerY;
+      drawDebug();
+      return;
+    }
+
     // Keep the target within playable area if user resizes/rotates
     const area = getPlayableArea();
     state.target.x = clamp(state.target.x, area.x, area.x + Math.max(0, area.w));
     state.target.y = clamp(state.target.y, area.y, area.y + Math.max(0, area.h));
     placeTarget();
-    const level = computeDesiredLevel();
-    setActiveLevel(level);
+    if (state.running) {
+      const level = computeDesiredLevel();
+      setActiveLevel(level);
+    }
     drawDebug();
   }
 
@@ -390,6 +416,8 @@
       const centerY = Math.round(window.innerHeight / 2);
       targetEl.style.left = centerX + 'px';
       targetEl.style.top = centerY + 'px';
+      state.target.x = centerX;
+      state.target.y = centerY;
     }
     // Trigger reveal (image + scale animation)
     // Ensure image URL matches build output when bundled
@@ -429,6 +457,7 @@
     state.audio.currentLevel = -1; // force level ramp on first update
     randomizeTarget();
     targetEl.classList.remove('found');
+    targetEl.classList.remove('revealed-static');
     targetEl.style.opacity = 0; // hide again
     // Reset size back to default box
     targetEl.style.width = '48px';
@@ -462,6 +491,14 @@
   });
   window.addEventListener('resize', onResize);
   targetEl.addEventListener('click', win);
+  targetEl.addEventListener('animationend', (e) => {
+    if (e && e.animationName && e.animationName !== 'reveal-spin-in') return;
+    if (targetEl.classList.contains('found')) {
+      state.winRevealDone = true;
+      // Disable transitions for instant subsequent resizes
+      targetEl.classList.add('revealed-static');
+    }
+  });
 
   // Settings modal wiring
   function openSettings() {
@@ -725,6 +762,7 @@
   }
 
   function updateCursor(near) {
+    if (!state.running) { field.style.cursor = 'default'; return; }
     const inside = isPointerInPlayableArea();
     const showHand = near && !state.settings.advanced;
     const cursor = inside ? (showHand ? 'pointer' : 'crosshair') : 'default';
